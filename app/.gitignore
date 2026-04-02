@@ -1,0 +1,7 @@
+*.map
+*.hex
+*.bin
+*.elf
+src/*.o
+src/*.d
+.clangd
