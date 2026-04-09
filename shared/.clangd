@@ -1,0 +1,9 @@
+CompileFlags:
+  Add:
+    - -I/home/evok/workspace/embedded/bare_metal_tutor/libopencm3/include
+    - -I/home/evok/workspace/embedded/bare_metal_tutor/app/inc
+    - -I/home/evok/workspace/embedded/bare_metal_tutor/shared/inc
+    - -DSTM32F1
+    - -xc
+    - -target
+    - arm-none-eabi

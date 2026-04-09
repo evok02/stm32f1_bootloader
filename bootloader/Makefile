@@ -1,5 +1,6 @@
 DEVICE          = stm32f103c8t6
 OPENCM3_DIR    = ../libopencm3
+LDSCRIPT       = linkerscript.ld
 
 PREFIX         ?= arm-none-eabi
 STFLASH        = st-flash
@@ -8,36 +9,36 @@ OPT            = -Os
 DEBUG          = -ggdb3
 CSTD           = -std=c11
 
-BINARY         = firmware
+BINARY         = bootloader
 
 SRC_DIR        = src
 INC_DIR        = inc
-SHARED_SRC_DIR = ../shared/src
-SHARED_INC_DIR = ../shared/inc/
+SHARED_SRC_DIR        = ../shared/src
+SHARED_INC_DIR        = ../shared/inc
 
-DEFS			+= -I$(INC_DIR)
 DEFS			+= -I$(OPENCM3_DIR)/include
+DEFS			+= -I$(INC_DIR)
 DEFS			+= -I$(SHARED_INC_DIR)
 
 OBJS           += $(SRC_DIR)/$(BINARY).o
-OBJS           += $(SRC_DIR)/bootloader.o
-OBJS           += $(SHARED_SRC_DIR)/core/system.o
-OBJS           += $(SRC_DIR)/timer.o
+OBJS           += $(SRC_DIR)/comms.o
+OBJS           += $(SRC_DIR)/bl-flash.o
+OBJS           += $(SHARED_SRC_DIR)/core/crc8.o
 OBJS           += $(SHARED_SRC_DIR)/core/uart.o
+OBJS           += $(SHARED_SRC_DIR)/core/system.o
 OBJS           += $(SHARED_SRC_DIR)/core/ring-buffer.o
+OBJS           += $(SHARED_SRC_DIR)/core/simple-timer.o
 
 include $(OPENCM3_DIR)/mk/genlink-config.mk
 include $(OPENCM3_DIR)/mk/gcc-config.mk
 
-LDSCRIPT       = linkerscript.ld
-
-CFLAGS         += $(OPT) $(CSTD) $(DEBUG) $(DEFS)
+CFLAGS         += $(OPT) $(CSTD) $(DEBUG)
 CFLAGS         += -Wextra -Wshadow -Wimplicit-function-declaration
 CFLAGS         += -Wredundant-decls -Wmissing-prototypes -Wstrict-prototypes
 CFLAGS         += -fno-common -ffunction-sections -fdata-sections
 
 CPPFLAGS       += -MD -Wall -Wundef
-CPPFLAGS       += -I$(INC_DIR)
+CPPFLAGS       += -I$(INC_DIR) $(DEFS)
 
 LDFLAGS        += --static -nostartfiles
 LDFLAGS        += -Wl,-Map=$(BINARY).map -Wl,--cref
@@ -56,6 +57,7 @@ $(BINARY).elf: $(OBJS) $(LDSCRIPT) $(LIBDEPS)
 $(BINARY).bin: $(BINARY).elf
 	@printf "  OBJCOPY $(BINARY).bin\n"
 	$(Q)$(OBJCOPY) -Obinary $< $@
+	python pad-bootloader.py
 
 $(BINARY).hex: $(BINARY).elf
 	@printf "  OBJCOPY $(BINARY).hex\n"
@@ -66,10 +68,6 @@ $(BINARY).list: $(BINARY).elf
 	$(Q)$(OBJDUMP) -S $< > $@
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
-	@printf "  CC      $<\n"
-	$(Q)$(CC) $(CFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
-
-$(SRC_DIR)/%.o: $(SRC_DIR)/%.S
 	@printf "  CC      $<\n"
 	$(Q)$(CC) $(CFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
 

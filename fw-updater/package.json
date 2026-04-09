@@ -1,0 +1,10 @@
+{
+    "dependencies": {
+        "serialport": "13.0.0",
+        "typescript": "^6.0.2"
+    },
+    "scripts": {
+        "build": "tsc index.ts",
+        "start": "node index.js"
+    }
+}

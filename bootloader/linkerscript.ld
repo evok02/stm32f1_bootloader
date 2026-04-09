@@ -21,7 +21,7 @@
 /* Define memory regions. */
 MEMORY
 {
-	rom 	 (rx)  : ORIGIN = 0x08000000, LENGTH = 64K
+	rom 	 (rx)  : ORIGIN = 0x08000000, LENGTH = 32K
 	ram 	 (rwx) : ORIGIN = 0x20000000, LENGTH = 20K
 }
 
@@ -39,6 +39,9 @@ SECTIONS
 
 		*(.vectors)	/* Vector table */
 		. = ALIGN(16);
+
+		KEEP (*(.firmware_info))
+		KEEP (*(.firmware_signature))
 
 		*(.text*)	/* Program code */
 		. = ALIGN(4);
