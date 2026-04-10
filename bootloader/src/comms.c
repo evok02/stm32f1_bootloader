@@ -23,7 +23,7 @@ static comms_packet_t last_transmitted_packet = { .length = 0, .data = {0}, .crc
 static comms_packet_t packet_buffer[PACKET_BUFFER_LENGTH];
 static uint32_t packet_read_index = 0;
 static uint32_t packet_write_index = 0;
-static uint32_t packet_buffer_mask = PACKET_BUFFER_LENGTH;
+static uint32_t packet_buffer_mask = PACKET_BUFFER_LENGTH - 1;
 
 bool comms_is_single_byte_packet(const comms_packet_t* packet, uint8_t byte) {
     if (packet->length != 1) { return false; }
@@ -92,7 +92,7 @@ void comms_update(void) {
                 }
 
                 memcpy(&packet_buffer[packet_write_index], &temporary_packet, sizeof(comms_packet_t));
-                packet_write_index = (packet_write_index + 1) & packet_buffer_mask;
+                packet_write_index = next_write_index;
                 comms_write(&ack_packet);
                 state = COMMS_STATE_LENGTH;
                 
@@ -109,11 +109,11 @@ bool comms_packets_available(void) {
 
 void comms_write(comms_packet_t* packet) {
     uart_write((uint8_t*)packet, PACKET_LENGTH);
-    memcpy(packet, &last_transmitted_packet, sizeof(comms_packet_t));
+    memcpy(&last_transmitted_packet, packet, sizeof(comms_packet_t));
 }
 
 void comms_read(comms_packet_t* packet) {
-    memcpy(&packet_buffer[packet_read_index], packet, sizeof(comms_packet_t));
+    memcpy(packet, &packet_buffer[packet_read_index], sizeof(comms_packet_t));
     packet_read_index = (packet_read_index + 1) & packet_buffer_mask;
 }
 

@@ -4,7 +4,7 @@
         "typescript": "^6.0.2"
     },
     "scripts": {
-        "build": "tsc index.ts",
+        "build": "tsc",
         "start": "node index.js"
     }
 }

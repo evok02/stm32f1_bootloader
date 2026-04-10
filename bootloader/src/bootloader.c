@@ -25,7 +25,7 @@
 
 #define MAX_FIRMWARE_LENGTH ((1024U * 64U) - BOOTLOADER_SIZE)
 
-#define DEFAULT_TIMEOUT (5e3)
+#define DEFAULT_TIMEOUT (5000e3)
 
 typedef enum bl_sate_t {
     BL_STATE_SYNC,
@@ -144,7 +144,6 @@ int main(void) {
         }
 
         comms_update();
-
         switch (state) {
             case BL_STATE_WAIT_FOR_UPDATE_REQ: {
                 if (comms_packets_available()) {
@@ -155,7 +154,7 @@ int main(void) {
                         comms_write(&temp_packet);
                         state = BL_STATE_DEVICE_ID_REQ;
                     } else {
-                       bootloader_exit(); 
+                        bootloader_exit(); 
                     }
                 } else {
                     check_for_timeout();
@@ -174,7 +173,7 @@ int main(void) {
                         simple_timer_reset(&temp_timer);
                         state = BL_STATE_DEVICE_ID_REQ;
                     } else {
-                       bootloader_exit(); 
+                        bootloader_exit(); 
                     }
                 } else {
                     check_for_timeout();
@@ -183,6 +182,7 @@ int main(void) {
             case BL_STATE_FW_LENGTH_REQ: {
                 simple_timer_reset(&temp_timer);
                 comms_create_single_byte_packet(&temp_packet, BL_PACKET_FW_LENGTH_REQ_DATA0);
+                comms_write(&temp_packet);
                 state = BL_STATE_FW_LENGTH_RES;
             } break;
             case BL_STATE_FW_LENGTH_RES: {
@@ -197,9 +197,9 @@ int main(void) {
                     );
                     if (is_fw_length_packet(&temp_packet) && (fw_length <= MAX_FIRMWARE_LENGTH)) {
                         simple_timer_reset(&temp_timer);
-                        state = BL_STATE_DEVICE_ID_REQ;
+                        state = BL_STATE_ERASE_APPLICATION;
                     } else {
-                       bootloader_exit(); 
+                        bootloader_exit(); 
                     }
                 } else {
                     check_for_timeout();
@@ -207,12 +207,17 @@ int main(void) {
             } break;
             case BL_STATE_ERASE_APPLICATION: {
                 bl_flash_erase_main_application();
+
+                comms_create_single_byte_packet(&temp_packet, BL_PACKET_READY_FOR_DATA_DATA0);
+                comms_write(&temp_packet);
                 simple_timer_reset(&temp_timer);
+                
                 state = BL_STATE_RECEIVE_FW;
             } break;
             case BL_STATE_RECEIVE_FW: {
                 if (comms_packets_available()) {
                     comms_read(&temp_packet);
+
                     const uint8_t packet_length = ((temp_packet.length & 0x0f) + 1);
                     bl_flash_write(MAIN_START_ADDR + bytes_written, (uint32_t*)temp_packet.data, packet_length);
                     bytes_written += packet_length;
@@ -220,8 +225,11 @@ int main(void) {
 
                     if (bytes_written >= fw_length) {
                         comms_create_single_byte_packet(&temp_packet, BL_PACKET_UPDATE_SUCCESSFUL_DATA0);
-
+                        comms_write(&temp_packet);
                         state = BL_STATE_DONE;
+                    } else {
+                        comms_create_single_byte_packet(&temp_packet, BL_PACKET_READY_FOR_DATA_DATA0);
+                        comms_write(&temp_packet);
                     }
                 } else {
                     check_for_timeout();
